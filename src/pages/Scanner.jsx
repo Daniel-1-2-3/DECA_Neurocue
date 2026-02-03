@@ -30,25 +30,8 @@ function Scanner() {
   const [otherConditionDescription, setOtherConditionDescription] = useState("Early stage brain swelling; dangerously high pressures in cranium.")
   const { w, h } = useWindowSize();
 
-  // Refs to control the two video elements directly
   const loopVideoRef = useRef(null);
   const analyzeVideoRef = useRef(null);
-
-  useEffect(() => {
-    const assets = [pupilVideo, retinaVideo, analyzePupilVideo, analyzeRetinaVideo];
-    let loaded = 0;
-    assets.forEach(src => {
-      const v = document.createElement('video');
-      v.src = src;
-      v.preload = 'auto';
-      v.muted = true;
-      v.oncanplaythrough = () => {
-        loaded++;
-        if (loaded === assets.length) setIsReady(true);
-      };
-      v.load();
-    });
-  }, []);
 
   const resetState = () => {
     setIsAnalyzing(false);
@@ -59,21 +42,19 @@ function Scanner() {
     setAnalysisPhase('none');
   };
 
-  // Sync Video 1 (Loops)
-  useEffect(() => {
-    if (loopVideoRef.current) {
-      loopVideoRef.current.load();
-      loopVideoRef.current.play().catch(() => {});
-    }
-  }, [scanMode]);
+  // Logic to handle "System Ready" based on video data loading
+  const handleVideoLoad = () => {
+    setIsReady(true);
+  };
 
-  // Sync Video 2 (Analysis) - Pre-load the first analysis clip
   useEffect(() => {
-    if (analyzeVideoRef.current && isAnalyzing) {
-      analyzeVideoRef.current.load();
-      analyzeVideoRef.current.play().catch(() => {});
+    if (showResults) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
     }
-  }, [analysisPhase, isAnalyzing]);
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [showResults]);
 
   const startAnalyze = () => {
     setIsAnalyzing(true);
@@ -87,18 +68,17 @@ function Scanner() {
     setIsRecording(!isRecording);
   }
 
+  // Secret Diagnostic Injectors
   function iritis() {
     setConcussionProb("97.3% Probability");
     setOtherCondition("Traumatic Iritis");
     setOtherConditionDescription("Blunt force trauma to the eye that often occurs simultaneously with a concussion.");
   }
-
   function papilledema() {
     setConcussionProb("97.4% Probability");
     setOtherCondition("Papilledema");
     setOtherConditionDescription("Early stage brain swelling; dangerously high pressures in cranium.");
   }
-
   function retinalBleed() {
     setConcussionProb("98.3% Probability");
     setOtherCondition("Retinal Hemorrhage");
@@ -108,9 +88,10 @@ function Scanner() {
   const isReadyForAnalysis = hasPupil && hasRetina;
 
   return (
-    <div className="h-screen w-screen bg-black overflow-hidden flex items-center justify-center font-sans">
+    <div className="h-screen w-screen bg-black overflow-hidden flex items-center justify-center font-sans text-white">
       <div className="h-full w-full mx-2 bg-neutral-900 overflow-hidden relative shadow-2xl">
         
+        {/* Background Depth */}
         <div className="absolute inset-0">
           <div className="w-full h-full bg-neutral-800" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--tw-gradient-stops))] from-neutral-700/20 via-transparent to-black" />
@@ -128,7 +109,7 @@ function Scanner() {
           {hasHistory && (
             <button 
               onClick={() => setShowResults(true)}
-              className="text-gray-300 text-[10px] uppercase tracking-widest px-3 py-1 rounded bg-gray-700 transition-all"
+              className="text-gray-300 text-[10px] uppercase tracking-widest px-3 py-1 rounded bg-gray-700 transition-all hover:bg-gray-600"
             >
               Open Diagnostic
             </button>
@@ -177,28 +158,36 @@ function Scanner() {
             
             <div className="relative w-full h-full rounded-full overflow-hidden pointer-events-auto cursor-pointer">
               
-              {/* TAG 1: Loop Videos (Pupil / Retina) */}
+              {/* VIDEO 1: Loop Sources (Pupil/Retina) */}
               <video
                 ref={loopVideoRef}
+                key={`loop-${scanMode}`}
                 src={scanMode === 'pupil' ? pupilVideo : retinaVideo}
                 className={`absolute inset-0 w-full h-full object-cover scale-130 transition-opacity duration-300 ${(!isAnalyzing && isRecording) ? 'opacity-80' : 'opacity-0'}`}
                 autoPlay muted loop playsInline
+                preload="auto"
+                crossOrigin="anonymous"
+                onLoadedData={handleVideoLoad}
               />
 
-              {/* TAG 2: Analysis Videos (AnalyzePupil / AnalyzeRetina) */}
+              {/* VIDEO 2: Analysis Sources (Phase 1/2) */}
               <video
                 ref={analyzeVideoRef}
+                key={`analyze-${analysisPhase}`}
                 src={analysisPhase === 'retina' ? analyzeRetinaVideo : analyzePupilVideo}
                 className={`absolute inset-0 w-full h-full object-cover scale-130 transition-opacity duration-300 ${isAnalyzing ? 'opacity-80' : 'opacity-0'}`}
+                autoPlay={isAnalyzing}
+                muted playsInline
+                preload="auto"
+                crossOrigin="anonymous"
                 onEnded={() => {
                     if (analysisPhase === 'pupil') setAnalysisPhase('retina');
-                    else {
+                    else if (analysisPhase === 'retina') {
                         setShowResults(true);
                         setHasHistory(true);
                         resetState();
                     }
                 }}
-                muted playsInline
               />
 
               <div className="absolute inset-0 bg-[radial-gradient(circle,transparent_40%,rgba(0,0,0,0.6)_100%)] pointer-events-none" />
@@ -226,10 +215,10 @@ function Scanner() {
                   <div className="h-full flex flex-col gap-1 relative">
                     <div className={`absolute left-0 right-0 h-[calc(50%-4px)] bg-white/10 rounded-lg transition-all duration-300 ease-out ${scanMode === 'retina' ? 'translate-y-[calc(100%+4px)]' : 'translate-y-0'}`} />
                     <button onClick={() => setScanMode('pupil')} disabled={isRecording} className={`relative z-10 flex-1 w-full text-[11px] font-bold uppercase transition-colors duration-300 ${scanMode === 'pupil' ? 'text-white/70' : 'text-white/30'}`}>
-                      <span className={hasPupil ? 'text-emerald-700' : ''}>Pupil</span>
+                      <span className={hasPupil ? 'text-emerald-500' : ''}>Pupil</span>
                     </button>
                     <button onClick={() => setScanMode('retina')} disabled={isRecording} className={`relative z-10 flex-1 w-full text-[11px] font-bold uppercase transition-colors duration-300 ${scanMode === 'retina' ? 'text-white/70' : 'text-white/30'}`}>
-                      <span className={hasRetina ? 'text-emerald-700' : ''}>Retina</span>
+                      <span className={hasRetina ? 'text-emerald-500' : ''}>Retina</span>
                     </button>
                   </div>
                 </div>
@@ -237,7 +226,7 @@ function Scanner() {
             </div>
           ) : (
             <div className="w-full flex justify-center animate-in fade-in zoom-in duration-700">
-              <button onClick={startAnalyze} className="w-48 h-14 rounded-md bg-gray-500/20 border-2 border-gray-700/40 flex items-center justify-center group/btn shadow-[0_0_30px_rgba(16,185,129,0.1)] transition-all overflow-hidden">
+              <button onClick={startAnalyze} className="w-48 h-14 rounded-md bg-gray-500/20 border-2 border-gray-700/40 flex items-center justify-center group/btn shadow-[0_0_30px_rgba(16,185,129,0.1)] transition-all overflow-hidden active:scale-95">
                 <span className="relative z-10 text-gray-400 text-[11px] uppercase tracking-[0.3em] text-center">Run Analysis</span>
                 <div className="absolute inset-0 rounded-xl border border-gray-500/50 animate-ping opacity-20" />
               </button>
@@ -245,31 +234,38 @@ function Scanner() {
           )}
         </div>
 
-        {/* Results Modal */}
+        {/* Diagnostic Results Popup */}
         {showResults && (
-           <div className="fixed inset-0 z-100 flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
-           <div className="w-full max-w-sm bg-neutral-900 border border-white/10 rounded-sm p-8 relative shadow-2xl animate-in fade-in zoom-in duration-300">
-             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-neutral-700 border border-white/10 px-4 py-1 rounded-sm text-[12px] uppercase tracking-tighter text-white font-medium">Diagnostic</div>
-             <div className="space-y-6 mt-4">
-               <div className="border-l-2 border-gray-600 pl-4">
-                 <div className="text-white/40 text-[10px] uppercase tracking-widest mb-1 font-semibold">Concussion Assessment</div>
-                 <div className="text-white uppercase text-sm font-medium">Concussion</div>
-                 <div className="text-red-400 text-sm mt-0.5">{concussionProb}</div>
-               </div>
-               <div className="border-l-2 border-gray-600 pl-4">
-                 <div className="text-white/40 text-[10px] uppercase tracking-widest mb-1 font-semibold">Other Possible Injuries</div>
-                 <div className="text-white uppercase text-sm font-medium">{otherCondition}</div>
-                 <div className="text-gray-400 text-[12px] mt-1 leading-tight tracking-wide">{otherConditionDescription}</div>
-               </div>
-             </div>
-             <button onClick={() => setShowResults(false)} className="w-full mt-10 py-3 bg-white/5 border border-white/10 hover:bg-white/10 rounded-sm text-white/70 text-[12px] uppercase transition-colors">Close Report</button>
-           </div>
-         </div>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
+            <div className="w-full max-w-sm bg-neutral-900 border border-white/10 rounded-sm p-8 relative shadow-2xl animate-in fade-in zoom-in duration-300">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-neutral-700 border border-white/10 px-4 py-1 rounded-sm text-[12px] uppercase tracking-tighter text-white font-medium">Diagnostic</div>
+              <div className="space-y-6 mt-4">
+                <div className="border-l-2 border-gray-600 pl-4">
+                  <div className="text-white/40 text-[10px] uppercase tracking-widest mb-1 font-semibold">Concussion Assessment</div>
+                  <div className="text-white uppercase text-sm font-medium">Concussion</div>
+                  <div className="text-red-400 text-sm mt-0.5">{concussionProb}</div>
+                </div>
+                <div className="border-l-2 border-gray-600 pl-4">
+                  <div className="text-white/40 text-[10px] uppercase tracking-widest mb-1 font-semibold">Other Possible Injuries</div>
+                  <div className="text-white uppercase text-sm font-medium">{otherCondition}</div>
+                  <div className="text-gray-400 text-[12px] mt-1 leading-tight tracking-wide">{otherConditionDescription}</div>
+                </div>
+                <div className="border-l-2 border-gray-600 pl-4">
+                  <a href="https://gemini.google.com" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between border border-white/10 px-3 py-2 rounded-sm group mr-6 hover:bg-white/10 transition-all">
+                    <div className="text-white/85 text-[10px] uppercase tracking-widest font-semibold flex items-center">Next Steps</div>
+                    <svg viewBox="0 0 24 24" className="w-4 h-4 text-white/50 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+                  </a>
+                </div>
+              </div>
+              <button onClick={() => setShowResults(false)} className="w-full mt-10 py-3 bg-white/5 border border-white/10 hover:bg-white/10 rounded-sm text-white/70 text-[12px] uppercase transition-colors">Close Report</button>
+            </div>
+          </div>
         )}
 
-        <button className="fixed bottom-2 left-2 z-200 py-2 h-20 w-14 opacity-0" onClick={() => iritis()} />
-        <button className="fixed bottom-26 left-2 z-200 py-2 h-20 w-14 opacity-0" onClick={() => retinalBleed()} />
-        <button className="fixed bottom-26 right-2 z-200 py-2 h-20 w-14 opacity-0" onClick={() => papilledema()} />
+        {/* Secret Function Buttons */}
+        <button className="fixed bottom-2 left-2 z-[200] py-2 h-20 w-14 opacity-0 cursor-default" onClick={() => iritis()} />
+        <button className="fixed bottom-[104px] left-2 z-[200] py-2 h-20 w-14 opacity-0 cursor-default" onClick={() => retinalBleed()} />
+        <button className="fixed bottom-[104px] right-2 z-[200] py-2 h-20 w-14 opacity-0 cursor-default" onClick={() => papilledema()} />
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
