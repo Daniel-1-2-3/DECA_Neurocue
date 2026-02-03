@@ -15,6 +15,7 @@ function useWindowSize() {
 }
 
 function Scanner() {
+  // --- ORIGINAL LOGIC ---
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisPhase, setAnalysisPhase] = useState('none'); 
@@ -23,15 +24,18 @@ function Scanner() {
   const [scanMode, setScanMode] = useState('pupil');
   const [hasPupil, setHasPupil] = useState(false);
   const [hasRetina, setHasRetina] = useState(false);
-  const [isReady, setIsReady] = useState(false);
 
   const [concussionProb, setConcussionProb] = useState("97.4% Probability");
   const [otherCondition, setOtherCondition] = useState("Papilledema");
-  const [otherConditionDescription, setOtherConditionDescription] = useState("Early stage brain swelling; dangerously high pressures in cranium.")
+  const [otherConditionDescription, setOtherConditionDescription] = useState("Early stage brain swelling; dangerously high pressures in cranium.");
+  
   const { w, h } = useWindowSize();
-
-  const loopVideoRef = useRef(null);
   const analyzeVideoRef = useRef(null);
+
+  // --- BUFFERING FIX ---
+  const [pupilBuffered, setPupilBuffered] = useState(false);
+  const [retinaBuffered, setRetinaBuffered] = useState(false);
+  const isReady = pupilBuffered && retinaBuffered;
 
   const resetState = () => {
     setIsAnalyzing(false);
@@ -40,11 +44,6 @@ function Scanner() {
     setHasRetina(false);
     setScanMode('pupil');
     setAnalysisPhase('none');
-  };
-
-  // Logic to handle "System Ready" based on video data loading
-  const handleVideoLoad = () => {
-    setIsReady(true);
   };
 
   useEffect(() => {
@@ -62,23 +61,24 @@ function Scanner() {
   };
 
   function record() {
-    if (isAnalyzing) return;
+    if (!isReady || isAnalyzing) return;
     if (isRecording && scanMode === 'pupil' && !hasPupil) setHasPupil(true);
     if (isRecording && scanMode === 'retina' && !hasRetina) setHasRetina(true);
     setIsRecording(!isRecording);
   }
 
-  // Secret Diagnostic Injectors
   function iritis() {
     setConcussionProb("97.3% Probability");
     setOtherCondition("Traumatic Iritis");
     setOtherConditionDescription("Blunt force trauma to the eye that often occurs simultaneously with a concussion.");
   }
+
   function papilledema() {
     setConcussionProb("97.4% Probability");
     setOtherCondition("Papilledema");
     setOtherConditionDescription("Early stage brain swelling; dangerously high pressures in cranium.");
   }
+
   function retinalBleed() {
     setConcussionProb("98.3% Probability");
     setOtherCondition("Retinal Hemorrhage");
@@ -91,7 +91,6 @@ function Scanner() {
     <div className="h-screen w-screen bg-black overflow-hidden flex items-center justify-center font-sans text-white">
       <div className="h-full w-full mx-2 bg-neutral-900 overflow-hidden relative shadow-2xl">
         
-        {/* Background Depth */}
         <div className="absolute inset-0">
           <div className="w-full h-full bg-neutral-800" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--tw-gradient-stops))] from-neutral-700/20 via-transparent to-black" />
@@ -99,11 +98,12 @@ function Scanner() {
 
         {/* Header Bar */}
         <div className="absolute top-0 left-0 w-full border-b border-white/5 bg-black/20 backdrop-blur-md z-30 flex items-center justify-between px-6" style={{ height: `${h/15}px` }}>
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
+            <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-500 ${isReady ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
             <span className="text-white/70 text-[10px] uppercase tracking-widest font-medium">
               {isAnalyzing 
                 ? `Analyzing ${analysisPhase}` 
-                : (isReady ? 'System Ready' : 'Loading')}
+                : (isReady ? 'System Ready' : 'Buffering Sensors...')}
             </span>
           </div>
           {hasHistory && (
@@ -148,7 +148,7 @@ function Scanner() {
           </div>
         )}
 
-        {/* Main Circle & Video Duo-Mount */}
+        {/* Main Circle & Permanent Triple Video Mount */}
         <div className="absolute inset-0 flex justify-center items-center pointer-events-none" style={{ height: `${h/1.5}px`, top: `${h/15 + 20}px` }}>
           <div 
             className="rounded-full relative transition-all duration-1000 overflow-hidden flex items-center justify-center bg-gray-800 shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_0_40px_rgba(0,0,0,1)] border border-white/3" 
@@ -158,28 +158,30 @@ function Scanner() {
             
             <div className="relative w-full h-full rounded-full overflow-hidden pointer-events-auto cursor-pointer">
               
-              {/* VIDEO 1: Loop Sources (Pupil/Retina) */}
+              {/* PUPIL SENSOR - Permanent Mount */}
               <video
-                ref={loopVideoRef}
-                key={`loop-${scanMode}`}
-                src={scanMode === 'pupil' ? pupilVideo : retinaVideo}
-                className={`absolute inset-0 w-full h-full object-cover scale-130 transition-opacity duration-300 ${(!isAnalyzing && isRecording) ? 'opacity-80' : 'opacity-0'}`}
-                autoPlay muted loop playsInline
-                preload="auto"
-                crossOrigin="anonymous"
-                onLoadedData={handleVideoLoad}
+                src={pupilVideo}
+                onCanPlayThrough={() => setPupilBuffered(true)}
+                className={`absolute inset-0 w-full h-full object-cover scale-130 transition-opacity duration-300 ${(!isAnalyzing && isRecording && scanMode === 'pupil') ? 'opacity-80' : 'opacity-0'}`}
+                autoPlay muted loop playsInline preload="auto" crossOrigin="anonymous"
               />
 
-              {/* VIDEO 2: Analysis Sources (Phase 1/2) */}
+              {/* RETINA SENSOR - Permanent Mount */}
+              <video
+                src={retinaVideo}
+                onCanPlayThrough={() => setRetinaBuffered(true)}
+                className={`absolute inset-0 w-full h-full object-cover scale-130 transition-opacity duration-300 ${(!isAnalyzing && isRecording && scanMode === 'retina') ? 'opacity-80' : 'opacity-0'}`}
+                autoPlay muted loop playsInline preload="auto" crossOrigin="anonymous"
+              />
+
+              {/* ANALYSIS ENGINE */}
               <video
                 ref={analyzeVideoRef}
                 key={`analyze-${analysisPhase}`}
                 src={analysisPhase === 'retina' ? analyzeRetinaVideo : analyzePupilVideo}
                 className={`absolute inset-0 w-full h-full object-cover scale-130 transition-opacity duration-300 ${isAnalyzing ? 'opacity-80' : 'opacity-0'}`}
                 autoPlay={isAnalyzing}
-                muted playsInline
-                preload="auto"
-                crossOrigin="anonymous"
+                muted playsInline preload="auto" crossOrigin="anonymous"
                 onEnded={() => {
                     if (analysisPhase === 'pupil') setAnalysisPhase('retina');
                     else if (analysisPhase === 'retina') {
@@ -205,7 +207,11 @@ function Scanner() {
             <div className="w-full flex items-center justify-between animate-in fade-in duration-500">
               <div className="flex-1" /> 
               <div className="flex-none">
-                <button onClick={record} className="group relative w-16 h-16 flex items-center justify-center outline-none">
+                <button 
+                  onClick={record} 
+                  disabled={!isReady}
+                  className={`group relative w-16 h-16 flex items-center justify-center outline-none transition-all duration-500 ${!isReady ? 'opacity-20 grayscale cursor-wait' : 'opacity-100'}`}
+                >
                   <div className="absolute inset-0 rounded-full border-4 border-white/30 group-hover:border-white/50 transition-all duration-300" />
                   <div className={`bg-red-600/70 shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all duration-300 ease-in-out ${isRecording ? 'w-6 h-6 rounded-sm' : 'w-12 h-12 rounded-full'}`} />
                 </button>
@@ -215,10 +221,10 @@ function Scanner() {
                   <div className="h-full flex flex-col gap-1 relative">
                     <div className={`absolute left-0 right-0 h-[calc(50%-4px)] bg-white/10 rounded-lg transition-all duration-300 ease-out ${scanMode === 'retina' ? 'translate-y-[calc(100%+4px)]' : 'translate-y-0'}`} />
                     <button onClick={() => setScanMode('pupil')} disabled={isRecording} className={`relative z-10 flex-1 w-full text-[11px] font-bold uppercase transition-colors duration-300 ${scanMode === 'pupil' ? 'text-white/70' : 'text-white/30'}`}>
-                      <span className={hasPupil ? 'text-emerald-500' : ''}>Pupil</span>
+                      <span className={hasPupil ? 'text-emerald-500 font-bold' : ''}>Pupil</span>
                     </button>
                     <button onClick={() => setScanMode('retina')} disabled={isRecording} className={`relative z-10 flex-1 w-full text-[11px] font-bold uppercase transition-colors duration-300 ${scanMode === 'retina' ? 'text-white/70' : 'text-white/30'}`}>
-                      <span className={hasRetina ? 'text-emerald-500' : ''}>Retina</span>
+                      <span className={hasRetina ? 'text-emerald-500 font-bold' : ''}>Retina</span>
                     </button>
                   </div>
                 </div>
@@ -234,7 +240,7 @@ function Scanner() {
           )}
         </div>
 
-        {/* Diagnostic Results Popup */}
+        {/* Results Modal */}
         {showResults && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
             <div className="w-full max-w-sm bg-neutral-900 border border-white/10 rounded-sm p-8 relative shadow-2xl animate-in fade-in zoom-in duration-300">
@@ -262,7 +268,7 @@ function Scanner() {
           </div>
         )}
 
-        {/* Secret Function Buttons */}
+        {/* Hidden Buttons for testing conditions */}
         <button className="fixed bottom-2 left-2 z-[200] py-2 h-20 w-14 opacity-0 cursor-default" onClick={() => iritis()} />
         <button className="fixed bottom-[104px] left-2 z-[200] py-2 h-20 w-14 opacity-0 cursor-default" onClick={() => retinalBleed()} />
         <button className="fixed bottom-[104px] right-2 z-[200] py-2 h-20 w-14 opacity-0 cursor-default" onClick={() => papilledema()} />
