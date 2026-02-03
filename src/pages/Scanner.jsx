@@ -68,20 +68,20 @@ function Scanner() {
     setIsRecording(!isRecording);
   }
 
-  function healthy() {
-    setConcussionProb("4.2% Probability");
-    setOtherCondition("None");
-    setOtherConditionDescription("");
+  function iritis() {
+    setConcussionProb("97.3% Probability");
+    setOtherCondition("Traumatic Iritis");
+    setOtherConditionDescription("Blunt force trauma to the eye that often occurs simultaneously with a concussion.");
   }
 
-  function concussionPapilledema() {
+  function papilledema() {
     setConcussionProb("97.4% Probability");
     setOtherCondition("Papilledema");
     setOtherConditionDescription("Early stage brain swelling; dangerously high pressures in cranium.");
   }
 
-  function concussionRetinal() {
-    setConcussionProb("97.4% Probability");
+  function retinalBleed() {
+    setConcussionProb("98.3% Probability");
     setOtherCondition("Retinal Hemorrhage");
     setOtherConditionDescription("Small bleeding on the back of eye; indicates brain being rattled.");
   }
@@ -246,7 +246,7 @@ function Scanner() {
                     Concussion Assessment
                   </div>
                   <div className="text-white uppercase text-sm font-medium">Concussion</div>
-                  <div className={`${(concussionProb === "4.2% Probability") ? 'text-green-600' : 'text-red-400'} text-sm mt-0.5`}>
+                  <div className="text-red-400 text-sm mt-0.5">
                     {concussionProb}
                   </div>
                 </div>
@@ -260,6 +260,31 @@ function Scanner() {
                     {otherConditionDescription}
                   </div>
                 </div>
+
+                <div className="border-l-2 border-gray-600 pl-4">
+                  <a 
+                    href="https://gemini.google.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="flex items-center justify-between border border-white/10 px-3 py-2 rounded-sm group mr-6 hover:bg-white/10 transition-all"
+                  >
+                    <div className="text-white/85 text-[10px] uppercase tracking-widest font-semibold items-center justify-center flex">
+                      Next Steps
+                    </div>
+                    {/* Simple CSS Arrow */}
+                    <svg 
+                      viewBox="0 0 24 24" 
+                      className="w-4 h-4 text-white/50 group-hover:translate-x-1 transition-transform" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="2" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round"
+                    >
+                      <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                  </a>
+                </div>
               </div>
 
               <button 
@@ -271,24 +296,24 @@ function Scanner() {
             </div>
           </div>
         )}
-        {/* Cooked 1 */}
+        {/* iritis */}
         <button 
-          className="fixed bottom-2 left-2 z-200 px-4 py-2 h-20 w-14 font-bold"
-          onClick={() => concussionRetinal()}
+          className="fixed bottom-2 left-2 z-200 py-2 h-20 w-14 font-bold"
+          onClick={() => iritis()}
         >
         </button>
 
-        {/* Cooked 2 */}
+        {/* retinal bleed */}
         <button 
-          className="fixed bottom-26 left-2 z-200 px-4 py-2 h-20 w-14 font-bold"
-          onClick={() => concussionPapilledema()}
+          className="fixed bottom-26 left-2 z-200 py-2 h-20 w-14 font-bold"
+          onClick={() => retinalBleed()}
         >
         </button>
 
-        {/* Healthy */}
+        {/* papi */}
         <button 
-          className="fixed bottom-26 right-2 z-200 px-4 py-2 h-20 w-14 font-bold"
-          onClick={() => healthy()}
+          className="fixed bottom-26 right-2 z-200 py-2 h-20 w-14 font-bold"
+          onClick={() => papilledema()}
         >
         </button>
       </div>
