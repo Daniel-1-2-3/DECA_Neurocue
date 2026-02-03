@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import pupilVideo from "../assets/pupil.mp4";
 import retinaVideo from "../assets/retina.mp4";
-import analyzePupilVideo from "../assets/pupil.mp4";
-import analyzeRetinaVideo from "../assets/retina.mp4";
+import analyzePupilVideo from "../assets/analyzePupil.mp4";
+import analyzeRetinaVideo from "../assets/analyzeRetina.mp4";
 
 function useWindowSize() {
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight });
@@ -41,22 +41,6 @@ function Scanner() {
       videoRef.current.play().catch(() => {});
     }
   }, [isRecording, scanMode]);
-
-  useEffect(() => {
-    if (!isAnalyzing) return;
-    if (analysisPhase === 'pupil') {
-      const timer = setTimeout(() => setAnalysisPhase('retina'), 5000);
-      return () => clearTimeout(timer);
-    }
-    if (analysisPhase === 'retina') {
-      const timer = setTimeout(() => {
-        setShowResults(true);
-        setHasHistory(true);
-        resetState();
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [isAnalyzing, analysisPhase]);
 
   useEffect(() => {
     if (showResults) {
@@ -132,38 +116,53 @@ function Scanner() {
         )}
 
         {/* Main Circle & Video */}
-<div className="absolute inset-0 flex justify-center items-center pointer-events-none" style={{ height: `${h/1.5}px`, top: `${h/15 + 20}px` }}>
-  <div 
-    className="rounded-full relative transition-all duration-1000 overflow-hidden flex items-center justify-center bg-[#0a0a0a] shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_0_40px_rgba(0,0,0,1)] border border-white/3" 
-    style={{ width: `${w/1.2}px`, height: `${w/1.2}px` }}
-  >
-    {/* Physical Lens Effect: Multi-layered micro-borders */}
-    <div className="absolute inset-0 rounded-full border-[6px] border-black/40 z-10 pointer-events-none" />
-    <div className="absolute inset-0 rounded-full border border-white/5 z-10 pointer-events-none" />
-    
-    {/* Ambient Dark Polish (Resting State Texture) */}
-    {!isRecording && !isAnalyzing && (
-      <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_0%,transparent_70%)] animate-pulse pointer-events-none" />
-    )}
+        <div className="absolute inset-0 flex justify-center items-center pointer-events-none" style={{ height: `${h/1.5}px`, top: `${h/15 + 20}px` }}>
+          <div 
+            className="rounded-full relative transition-all duration-1000 overflow-hidden flex items-center justify-center bg-[#0a0a0a] shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_0_40px_rgba(0,0,0,1)] border border-white/3" 
+            style={{ width: `${w/1.2}px`, height: `${w/1.2}px` }}
+          >
+            <div className="absolute inset-0 rounded-full border-[6px] border-black/40 z-10 pointer-events-none" />
+            <div className="absolute inset-0 rounded-full border border-white/5 z-10 pointer-events-none" />
+            
+            {!isRecording && !isAnalyzing && (
+              <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_0%,transparent_70%)] animate-pulse pointer-events-none" />
+            )}
 
-    {/* Video with a dark vignette to prevent "floating" edges */}
-    <div className="relative w-full h-full rounded-full overflow-hidden">
-      <video
-        ref={videoRef}
-        key={isAnalyzing ? analysisPhase : scanMode}
-        src={isAnalyzing 
-          ? (analysisPhase === 'pupil' ? analyzePupilVideo : analyzeRetinaVideo) 
-          : (scanMode === 'pupil' ? pupilVideo : retinaVideo)
-        }
-        className={`w-full h-full object-cover transition-opacity duration-1000 scale-160 ${(isRecording || isAnalyzing) ? 'opacity-80' : 'opacity-0'}`}
-        autoPlay={isAnalyzing}
-        muted loop playsInline
-      />
-      {/* Dark Vignette Overlay for the Video */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle,transparent_40%,rgba(0,0,0,0.6)_100%)] pointer-events-none" />
-    </div>
-  </div>
-</div>
+            <div className="relative w-full h-full rounded-full overflow-hidden pointer-events-auto cursor-pointer">
+              <video
+                ref={videoRef}
+                key={isAnalyzing ? analysisPhase : scanMode}
+                onClick={() => {
+                  if (videoRef.current) {
+                    videoRef.current.paused ? videoRef.current.play() : videoRef.current.pause();
+                  }
+                }}
+                // This event only triggers when the video reaches 100% completion
+                onEnded={() => {
+                  if (!isAnalyzing) return;
+                  if (analysisPhase === 'pupil') {
+                    setAnalysisPhase('retina');
+                  } else if (analysisPhase === 'retina') {
+                    setShowResults(true);
+                    setHasHistory(true);
+                    resetState();
+                  }
+                }}
+                src={isAnalyzing 
+                  ? (analysisPhase === 'pupil' ? analyzePupilVideo : analyzeRetinaVideo) 
+                  : (scanMode === 'pupil' ? pupilVideo : retinaVideo)
+                }
+                className={`w-full h-full object-cover transition-opacity duration-1000 scale-130 ${(isRecording || isAnalyzing) ? 'opacity-80' : 'opacity-0'}`}
+                autoPlay={isAnalyzing}
+                muted 
+                // Loop MUST be false during analysis so onEnded can fire
+                loop={!isAnalyzing} 
+                playsInline
+              />
+              <div className="absolute inset-0 bg-[radial-gradient(circle,transparent_40%,rgba(0,0,0,0.6)_100%)] pointer-events-none" />
+            </div>
+          </div>
+        </div>
 
         <div className="absolute top-0 left-0 w-full bg-linear-to-b from-black/40 to-black/80 backdrop-blur-[2px]" style={{ height: `${h}px`, top: `${h/15 + 20 + h/1.5 + 20}px` }} />
 
@@ -211,13 +210,13 @@ function Scanner() {
 
         {/* Diagnostic Results Popup */}
         {showResults && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
+          <div className="fixed inset-0 z-100 flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
             {/* This inner div is now perfectly centered vertically and horizontally */}
             <div className="w-full max-w-sm bg-neutral-900 border border-white/10 rounded-sm p-8 relative shadow-2xl animate-in fade-in zoom-in duration-300">
               
               {/* Label Tag */}
               <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-neutral-700 border border-white/10 px-4 py-1 rounded-sm text-[12px] uppercase tracking-tighter text-white font-medium">
-                Diagnostic Report
+                Diagnostic
               </div>
 
               <div className="space-y-6 mt-4">
@@ -244,9 +243,9 @@ function Scanner() {
 
               <button 
                 onClick={() => setShowResults(false)} 
-                className="w-full mt-10 py-3 bg-white/5 border border-white/10 hover:bg-white/10 rounded-sm text-white/70 text-[10px] font-black uppercase tracking-[0.3em] transition-colors"
+                className="w-full mt-10 py-3 bg-white/5 border border-white/10 hover:bg-white/10 rounded-sm text-white/70 text-[12px] uppercase transition-colors"
               >
-                Dismiss Report
+                Close Report
               </button>
             </div>
           </div>
