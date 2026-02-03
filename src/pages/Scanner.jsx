@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import pupilVideo from "../assets/pupil.mp4";
+import retinaVideo from "../assets/retina.mp4";
+import analyzePupilVideo from "../assets/pupil.mp4";
+import analyzeRetinaVideo from "../assets/retina.mp4";
 
 function useWindowSize() {
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight });
@@ -14,27 +17,60 @@ function useWindowSize() {
 function Scanner() {
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisPhase, setAnalysisPhase] = useState('none'); 
+  const [showResults, setShowResults] = useState(false);
+  const [hasHistory, setHasHistory] = useState(false);
   const [scanMode, setScanMode] = useState('pupil');
   const [hasPupil, setHasPupil] = useState(false);
   const [hasRetina, setHasRetina] = useState(false);
   const { w, h } = useWindowSize();
   const videoRef = useRef(null);
 
-  // Restart video when recording starts
+  const resetState = () => {
+    setIsAnalyzing(false);
+    setIsRecording(false);
+    setHasPupil(false);
+    setHasRetina(false);
+    setScanMode('pupil');
+    setAnalysisPhase('none');
+  };
+
   useEffect(() => {
     if (isRecording && videoRef.current) {
-      videoRef.current.currentTime = 0;
-      videoRef.current.play();
-    } else if (videoRef.current) {
-      videoRef.current.pause();
+      videoRef.current.load();
+      videoRef.current.play().catch(() => {});
     }
-  }, [isRecording]);
+  }, [isRecording, scanMode]);
+
+  useEffect(() => {
+    if (!isAnalyzing) return;
+    if (analysisPhase === 'pupil') {
+      const timer = setTimeout(() => setAnalysisPhase('retina'), 3000);
+      return () => clearTimeout(timer);
+    }
+    if (analysisPhase === 'retina') {
+      const timer = setTimeout(() => {
+        setShowResults(true);
+        setHasHistory(true);
+        resetState();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isAnalyzing, analysisPhase]);
+
+  const startAnalyze = () => {
+    setIsAnalyzing(true);
+    setAnalysisPhase('pupil');
+  };
 
   function record() {
+    if (isAnalyzing) return;
     if (isRecording && scanMode === 'pupil' && !hasPupil) setHasPupil(true);
     if (isRecording && scanMode === 'retina' && !hasRetina) setHasRetina(true);
     setIsRecording(!isRecording);
   }
+
+  const isReadyForAnalysis = hasPupil && hasRetina;
 
   return (
     <div className="h-screen w-screen bg-black overflow-hidden flex items-center justify-center font-sans">
@@ -46,91 +82,158 @@ function Scanner() {
         </div>
 
         {/* Header Bar */}
-        <div className="absolute top-0 left-0 w-full border-b border-white/5 bg-black/20 backdrop-blur-md z-10 flex items-center px-6" style={{ height: `${h/15}px` }}>
-          <div className={`w-2 h-2 rounded-full animate-pulse mr-2 ${isAnalyzing ? 'bg-emerald-500' : 'bg-red-500'}`}/>
-          <span className="text-white/70 text-[10px] uppercase tracking-widest font-medium">
-            {isAnalyzing ? 'Analyzing' : 'Scanning'}
-          </span>
-        </div>
-
-        {/* Scan Line Overlay */}
-        <div 
-          className="absolute left-1/2 -translate-x-1/2 pointer-events-none z-20 overflow-hidden rounded-full"
-          style={{ height: `${w/1.2}px`, top: `${h/15 + (h/1.5 - w/1.2)/2 + 20}px`, width: `${w/1.2}px`}}
-        >
-           <div className="absolute inset-x-0 h-0.5 bg-linear-to-r from-transparent via-blue-400/70 to-transparent top-0 animate-scan" />
-        </div>
-
-        {/* Main Circle Container */}
-        <div className="absolute inset-0 flex justify-center items-center pointer-events-none" style={{ height: `${h/1.5}px`, top: `${h/15 + 20}px` }}>
-          <div 
-            className="rounded-full relative border-[3px] border-gray-600 shadow-[0_0_40px_rgba(0,0,0,0.7)] overflow-hidden bg-black flex items-center justify-center" 
-            style={{ width: `${w/1.2}px`, height: `${w/1.2}px` }}
-          >
-            {/* Pupil */}
-            <video
-              ref={videoRef}
-              src={pupilVideo}
-              className={`w-full h-full object-cover transition-opacity duration-500 scale-120 ${(isRecording && scanMode === 'pupil') ? 'opacity-100' : 'opacity-0'}`}
-              muted
-              loop
-              playsInline
-            />
-
-            {/* Pupil */}
-            <video
-              ref={videoRef}
-              src={pupilVideo}
-              className={`w-full h-full object-cover transition-opacity duration-500 scale-120 ${(isRecording && scanMode === 'retina') ? 'opacity-100' : 'opacity-0'}`}
-              muted
-              loop
-              playsInline
-            />
-            
-            <div className="absolute inset-0 rounded-full border border-white/5 pointer-events-none" />
+        <div className="absolute top-0 left-0 w-full border-b border-white/5 bg-black/20 backdrop-blur-md z-30 flex items-center justify-between px-6" style={{ height: `${h/15}px` }}>
+          <div className="flex items-center">
+            <span className="text-white/70 text-[10px] uppercase tracking-widest font-medium">
+              {isAnalyzing ? `Analyzing ${analysisPhase}` : 'Scanning'}
+            </span>
           </div>
-        </div>
-
-        <div className="absolute top-0 left-0 w-full bg-linear-to-b from-black/40 to-black/80 backdrop-blur-[2px]" style={{ height: `${h}px`, top: `${h/15 + 20 + h/1.5 + 20}px` }} />
-        <div className="absolute left-0 w-full flex items-center justify-between px-6" style={{ height: `${h - (h/15 + 20 + h/1.5 + 20)}px`, top: `${h/15 + 20 + h/1.5 + 20}px` }}>
-          
-          <div className="flex-1 flex justify-start">
-            {(hasPupil && hasRetina) ? (
-              <button className="relative w-3/4 h-10 flex items-center justify-center outline-none group" onClick={() => setIsAnalyzing(true)}>
-                <div className="absolute inset-0 rounded-lg bg-grey-300/70 backdrop-blur-md border-2 border-white/5 group-hover:bg-grey-400/70 transition-all" />
-                <span className="relative z-10 text-white/80 text-[10px] font-semibold uppercase tracking-widest">Analyze</span>
-              </button>
-            ) : (
-              <div className="w-3/4 h-10 rounded-lg bg-white/5 border border-white/5 opacity-40 flex items-center justify-center">
-                 <span className="text-white/20 text-[10px] uppercase tracking-widest">Locked</span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex-none">
-            <button onClick={record} className="group relative w-16 h-16 flex items-center justify-center outline-none">
-              <div className="absolute inset-0 rounded-full border-4 border-white/30 group-hover:border-white/50 transition-all duration-300" />
-              <div className={`bg-red-600/70 shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all duration-300 ease-in-out ${isRecording ? 'w-6 h-6 rounded-sm' : 'w-12 h-12 rounded-full'}`} />
+          {hasHistory && (
+            <button 
+              onClick={() => setShowResults(true)}
+              className="text-gray-300 text-[10px] uppercase tracking-widest px-3 py-1 rounded bg-gray-700 transition-all"
+            >
+              Last Diagnostic
             </button>
-          </div>
+          )}
+        </div>
 
-          <div className="flex-1 flex justify-end">
-            <div className="relative w-16 h-20 bg-black/40 backdrop-blur-xl rounded-xl border border-white/10 p-1 flex flex-col gap-1">
-              <div className={`absolute left-1 right-1 h-[calc(50%-4px)] bg-white/10 rounded-lg transition-all duration-300 ease-out ${scanMode === 'retina' ? 'translate-y-full' : 'translate-y-0'}`} />
-              <button onClick={() => setScanMode('pupil')} className={`relative z-10 flex-1 w-full text-[8px] font-bold uppercase transition-colors duration-300 ${scanMode === 'pupil' ? 'text-white' : 'text-white/30'}`}>
-                <span className={hasPupil ? 'text-emerald-400' : ''}>Pupil</span>
-              </button>
-              <button onClick={() => setScanMode('retina')} className={`relative z-10 flex-1 w-full text-[8px] font-bold uppercase transition-colors duration-300 ${scanMode === 'retina' ? 'text-white' : 'text-white/30'}`}>
-                <span className={hasRetina ? 'text-emerald-400' : ''}>Retina</span>
-              </button>
+        {/* --- CURVED SCANNING LENS OVERLAY --- */}
+        {/* Only show and animate when recording, but hide during analysis */}
+        {isRecording && !isAnalyzing && (
+          <div 
+            className="absolute left-1/2 -translate-x-1/2 pointer-events-none z-20"
+            style={{ 
+                height: `${w/1.2}px`, 
+                top: `${h/15 + (h/1.5 - w/1.2)/2 + 20}px`, 
+                width: `${w/1.2}px`
+            }}
+          >
+            <div className="absolute inset-0 rounded-full overflow-hidden">
+              {/* Light Gradient Trail */}
+              <div 
+                className="absolute w-full h-12 bg-linear-to-b from-blue-800/30 via-blue-700/10 to-transparent animate-scan-curved"
+                style={{ borderRadius: '50% 50% 0 0' }} 
+              />
+              {/* Sharp Leading Edge */}
+              <div className="absolute w-full h-0.5 bg-blue-300/60 shadow-[0_0_15px_rgba(147,197,253,1)] animate-scan-curved" />
             </div>
           </div>
+        )}
+
+        {/* Main Circle & Video */}
+<div className="absolute inset-0 flex justify-center items-center pointer-events-none" style={{ height: `${h/1.5}px`, top: `${h/15 + 20}px` }}>
+  <div 
+    className="rounded-full relative transition-all duration-1000 overflow-hidden flex items-center justify-center bg-[#0a0a0a] shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_0_40px_rgba(0,0,0,1)] border border-white/[0.03]" 
+    style={{ width: `${w/1.2}px`, height: `${w/1.2}px` }}
+  >
+    {/* Physical Lens Effect: Multi-layered micro-borders */}
+    <div className="absolute inset-0 rounded-full border-[6px] border-black/40 z-10 pointer-events-none" />
+    <div className="absolute inset-0 rounded-full border border-white/[0.05] z-10 pointer-events-none" />
+    
+    {/* Ambient Dark Polish (Resting State Texture) */}
+    {!isRecording && !isAnalyzing && (
+      <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_0%,transparent_70%)] animate-pulse pointer-events-none" />
+    )}
+
+    {/* Video with a dark vignette to prevent "floating" edges */}
+    <div className="relative w-full h-full rounded-full overflow-hidden">
+      <video
+        ref={videoRef}
+        key={isAnalyzing ? analysisPhase : scanMode}
+        src={isAnalyzing 
+          ? (analysisPhase === 'pupil' ? analyzePupilVideo : analyzeRetinaVideo) 
+          : (scanMode === 'pupil' ? pupilVideo : retinaVideo)
+        }
+        className={`w-full h-full object-cover transition-opacity duration-1000 scale-160 ${(isRecording || isAnalyzing) ? 'opacity-80' : 'opacity-0'}`}
+        autoPlay={isAnalyzing}
+        muted loop playsInline
+      />
+      {/* Dark Vignette Overlay for the Video */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle,transparent_40%,rgba(0,0,0,0.6)_100%)] pointer-events-none" />
+    </div>
+  </div>
+</div>
+
+        <div className="absolute top-0 left-0 w-full bg-linear-to-b from-black/40 to-black/80 backdrop-blur-[2px]" style={{ height: `${h}px`, top: `${h/15 + 20 + h/1.5 + 20}px` }} />
+
+        {/* Footer Controls */}
+        <div className={`absolute left-0 w-full flex items-center px-6 transition-all duration-500 ${isAnalyzing ? 'opacity-20 pointer-events-none' : 'opacity-100'}`} 
+             style={{ height: `${h - (h/15 + 20 + h/1.5 + 20)}px`, top: `${h/15 + 20 + h/1.5 + 20}px` }}>
+          
+          {!isReadyForAnalysis ? (
+            <div className="w-full flex items-center justify-between animate-in fade-in duration-500">
+              <div className="flex-1" /> 
+              <div className="flex-none">
+                <button onClick={record} className="group relative w-16 h-16 flex items-center justify-center outline-none">
+                  <div className="absolute inset-0 rounded-full border-4 border-white/30 group-hover:border-white/50 transition-all duration-300" />
+                  <div className={`bg-red-600/70 shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all duration-300 ease-in-out ${isRecording ? 'w-6 h-6 rounded-sm' : 'w-12 h-12 rounded-full'}`} />
+                </button>
+              </div>
+              <div className="flex-1 flex justify-end">
+                <div className="relative w-16 h-20 bg-black/40 backdrop-blur-xl rounded-xl border border-white/10 p-1">
+                  <div className="h-full flex flex-col gap-1 relative">
+                    <div className={`absolute left-0 right-0 h-[calc(50%-4px)] bg-white/10 rounded-lg transition-all duration-300 ease-out ${scanMode === 'retina' ? 'translate-y-[calc(100%+4px)]' : 'translate-y-0'}`} />
+                    <button onClick={() => setScanMode('pupil')} disabled={isRecording} className={`relative z-10 flex-1 w-full text-[11px] font-bold uppercase transition-colors duration-300 ${scanMode === 'pupil' ? 'text-white/70' : 'text-white/30'}`}>
+                      <span className={hasPupil ? 'text-emerald-700' : ''}>Pupil</span>
+                    </button>
+                    <button onClick={() => setScanMode('retina')} disabled={isRecording} className={`relative z-10 flex-1 w-full text-[11px] font-bold uppercase transition-colors duration-300 ${scanMode === 'retina' ? 'text-white/70' : 'text-white/30'}`}>
+                      <span className={hasRetina ? 'text-emerald-700' : ''}>Retina</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="w-full flex justify-center animate-in fade-in zoom-in duration-700">
+              <button 
+                onClick={startAnalyze}
+                className="w-48 h-14 rounded-md bg-gray-500/20 border-2 border-gray-700/40 flex items-center justify-center group/btn shadow-[0_0_30px_rgba(16,185,129,0.1)] transition-all overflow-hidden"
+              >
+                <span className="relative z-10 text-gray-400 text-[11px] uppercase tracking-[0.3em] text-center">
+                  Run Analysis
+                </span>
+                <div className="absolute inset-0 rounded-xl border border-gray-500/50 animate-ping opacity-20" />
+              </button>
+            </div>
+          )}
         </div>
+
+        {/* Diagnostic Results Popup */}
+        {showResults && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-black/10 backdrop-blur-2xl">
+            <div className="w-full max-w-sm bg-neutral-900 border border-gray-500/30 rounded-sm p-8 relative shadow-[0_0_50px_rgba(16,185,129,0.1)]">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-700 px-4 py-1 rounded-sm text-[14px] uppercase text-white">
+                Diagnostic
+              </div>
+              <div className="space-y-6 mt-4">
+                <div className="border-l-2 border-gray-600 pl-4">
+                  <div className="text-white/40 text-[11px] uppercase mb-1">Concussion Assessment</div>
+                  <div className="text-white uppercase text-sm">Concussion:</div>
+                  <div className="text-red-400 text-sm mt-1">92.3% Probability</div>
+                </div>
+                <div className="border-l-2 border-gray-600 pl-4">
+                  <div className="text-white/40 text-[11px] uppercase mb-1">Other Possible Trauma</div>
+                  <div className="text-white uppercase text-sm">Papilledema:</div>
+                  <div className="text-gray-400 text-sm mt-1">Early stage brain swelling; dangerously high pressures in cranium</div>
+                </div>
+              </div>
+              <button onClick={() => setShowResults(false)} className="w-full mt-10 py-3 bg-white/5 border border-white/10 rounded-sm text-white/70 text-[10px] font-bold uppercase tracking-[0.2em]">Close Report</button>
+            </div>
+          </div>
+        )}
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes scan { 0% { top: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
-        .animate-scan { animation: scan 3s linear infinite; }
+        @keyframes scan-curved { 
+            0% { transform: translateY(-100%); opacity: 0; } 
+            15% { opacity: 1; } 
+            85% { opacity: 1; } 
+            100% { transform: translateY(${w/1.2}px); opacity: 0; } 
+        } 
+        .animate-scan-curved { 
+            animation: scan-curved 4s cubic-bezier(0.4, 0, 0.6, 1) infinite; 
+        }
       `}} />
     </div>
   );
