@@ -23,7 +23,7 @@ function Scanner() {
   const [scanMode, setScanMode] = useState('pupil');
   const [hasPupil, setHasPupil] = useState(false);
   const [hasRetina, setHasRetina] = useState(false);
-  const [isReady, setIsReady] = useState(false); // Track preloading
+  const [isReady, setIsReady] = useState(false);
 
   const [concussionProb, setConcussionProb] = useState("97.4% Probability");
   const [otherCondition, setOtherCondition] = useState("Papilledema");
@@ -31,7 +31,6 @@ function Scanner() {
   const { w, h } = useWindowSize();
   const videoRef = useRef(null);
 
-  // --- PRELOADING LOGIC ---
   useEffect(() => {
     const assets = [pupilVideo, retinaVideo, analyzePupilVideo, analyzeRetinaVideo];
     let loaded = 0;
@@ -39,6 +38,7 @@ function Scanner() {
       const v = document.createElement('video');
       v.src = src;
       v.preload = 'auto';
+      v.muted = true;
       v.oncanplaythrough = () => {
         loaded++;
         if (loaded === assets.length) setIsReady(true);
@@ -56,12 +56,14 @@ function Scanner() {
     setAnalysisPhase('none');
   };
 
+  // Improved Logic: Ensure video is always "Warm"
   useEffect(() => {
-    if (isRecording && videoRef.current) {
-      videoRef.current.load();
+    if (videoRef.current) {
+      // By calling play() immediately on src change (even if hidden), 
+      // the hardware decoder stays active.
       videoRef.current.play().catch(() => {});
     }
-  }, [isRecording, scanMode]);
+  }, [scanMode, isAnalyzing, analysisPhase]);
 
   useEffect(() => {
     if (showResults) {
@@ -132,7 +134,7 @@ function Scanner() {
           )}
         </div>
 
-        {/* 4 Corner Brackets around the circle area */}
+        {/* 4 Corner Brackets */}
         <div 
             className="absolute left-1/2 -translate-x-1/2 pointer-events-none z-10"
             style={{ 
@@ -187,8 +189,9 @@ function Scanner() {
                   }
                 }}
                 src={isAnalyzing ? (analysisPhase === 'pupil' ? analyzePupilVideo : analyzeRetinaVideo) : (scanMode === 'pupil' ? pupilVideo : retinaVideo)}
-                className={`w-full h-full object-cover transition-opacity duration-1000 scale-130 ${(isRecording || isAnalyzing) ? 'opacity-80' : 'opacity-0'}`}
-                autoPlay={isAnalyzing}
+                // KEY CHANGE: Removed opacity-0 toggle, changed to conditional opacity for a smoother "fade in" effect
+                className={`w-full h-full object-cover transition-opacity duration-300 scale-130 ${(isRecording || isAnalyzing) ? 'opacity-80' : 'opacity-0'}`}
+                autoPlay // Crucial for instant start
                 muted 
                 loop={!isAnalyzing} 
                 playsInline
@@ -237,7 +240,7 @@ function Scanner() {
           )}
         </div>
 
-        {/* Diagnostic Results Popup */}
+        {/* Results Modal */}
         {showResults && (
           <div className="fixed inset-0 z-100 flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
             <div className="w-full max-w-sm bg-neutral-900 border border-white/10 rounded-sm p-8 relative shadow-2xl animate-in fade-in zoom-in duration-300">
@@ -265,7 +268,6 @@ function Scanner() {
           </div>
         )}
 
-        {/* Secret Function Buttons */}
         <button className="fixed bottom-2 left-2 z-200 py-2 h-20 w-14 opacity-0" onClick={() => iritis()} />
         <button className="fixed bottom-26 left-2 z-200 py-2 h-20 w-14 opacity-0" onClick={() => retinalBleed()} />
         <button className="fixed bottom-26 right-2 z-200 py-2 h-20 w-14 opacity-0" onClick={() => papilledema()} />
