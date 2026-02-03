@@ -114,7 +114,6 @@ function Scanner() {
           )}
         </div>
 
-        {/* --- CURVED SCANNING LENS OVERLAY --- */}
         {/* Only show and animate when recording, but hide during analysis */}
         {isRecording && !isAnalyzing && (
           <div 
