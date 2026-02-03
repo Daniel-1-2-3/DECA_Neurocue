@@ -23,6 +23,10 @@ function Scanner() {
   const [scanMode, setScanMode] = useState('pupil');
   const [hasPupil, setHasPupil] = useState(false);
   const [hasRetina, setHasRetina] = useState(false);
+
+  const[concussionProb, setConcussionProb] = useState("97.4% Probability");
+  const[otherCondition, setOtherCondition] = useState("Papilledema");
+  const[otherConditionDescription, setOtherConditionDescription] = useState("Early stage brain swelling; dangerously high pressures in cranium.")
   const { w, h } = useWindowSize();
   const videoRef = useRef(null);
 
@@ -64,6 +68,24 @@ function Scanner() {
     setIsRecording(!isRecording);
   }
 
+  function healthy() {
+    setConcussionProb("4.2% Probability");
+    setOtherCondition("None");
+    setOtherConditionDescription("");
+  }
+
+  function concussionPapilledema() {
+    setConcussionProb("97.4% Probability");
+    setOtherCondition("Papilledema");
+    setOtherConditionDescription("Early stage brain swelling; dangerously high pressures in cranium.");
+  }
+
+  function concussionRetinal() {
+    setConcussionProb("97.4% Probability");
+    setOtherCondition("Retinal Hemorrhage");
+    setOtherConditionDescription("Small bleeding on the back of eye; indicates brain being rattled.");
+  }
+
   const isReadyForAnalysis = hasPupil && hasRetina;
 
   return (
@@ -87,7 +109,7 @@ function Scanner() {
               onClick={() => setShowResults(true)}
               className="text-gray-300 text-[10px] uppercase tracking-widest px-3 py-1 rounded bg-gray-700 transition-all"
             >
-              Last Diagnostic
+              Open Diagnostic
             </button>
           )}
         </div>
@@ -220,23 +242,23 @@ function Scanner() {
               </div>
 
               <div className="space-y-6 mt-4">
-                <div className="border-l-2 border-red-500/50 pl-4">
+                <div className="border-l-2 border-gray-600 pl-4">
                   <div className="text-white/40 text-[10px] uppercase tracking-widest mb-1 font-semibold">
                     Concussion Assessment
                   </div>
-                  <div className="text-white uppercase text-sm font-medium">Result:</div>
-                  <div className="text-red-400 text-sm mt-0.5 font-bold italic">
-                    92.3% Probability
+                  <div className="text-white uppercase text-sm font-medium">Concussion</div>
+                  <div className={`${(concussionProb === "4.2% Probability") ? 'text-green-600' : 'text-red-400'} text-sm mt-0.5`}>
+                    {concussionProb}
                   </div>
                 </div>
 
                 <div className="border-l-2 border-gray-600 pl-4">
                   <div className="text-white/40 text-[10px] uppercase tracking-widest mb-1 font-semibold">
-                    Secondary Findings
+                    Other Possible Injuries
                   </div>
-                  <div className="text-white uppercase text-sm font-medium">Papilledema:</div>
-                  <div className="text-gray-400 text-[11px] mt-1 leading-tight tracking-wide">
-                    Early stage brain swelling; dangerously high pressures in cranium.
+                  <div className="text-white uppercase text-sm font-medium">{otherCondition}</div>
+                  <div className="text-gray-400 text-[12px] mt-1 leading-tight tracking-wide">
+                    {otherConditionDescription}
                   </div>
                 </div>
               </div>
@@ -250,6 +272,26 @@ function Scanner() {
             </div>
           </div>
         )}
+        {/* Cooked 1 */}
+        <button 
+          className="fixed bottom-2 left-2 z-200 px-4 py-2 h-20 w-14 font-bold"
+          onClick={() => concussionRetinal()}
+        >
+        </button>
+
+        {/* Cooked 2 */}
+        <button 
+          className="fixed bottom-26 left-2 z-200 px-4 py-2 h-20 w-14 font-bold"
+          onClick={() => concussionPapilledema()}
+        >
+        </button>
+
+        {/* Healthy */}
+        <button 
+          className="fixed bottom-26 right-2 z-200 px-4 py-2 h-20 w-14 font-bold"
+          onClick={() => healthy()}
+        >
+        </button>
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
