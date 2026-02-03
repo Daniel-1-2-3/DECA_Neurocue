@@ -139,7 +139,7 @@ function Scanner() {
         {/* Main Circle & Video */}
         <div className="absolute inset-0 flex justify-center items-center pointer-events-none" style={{ height: `${h/1.5}px`, top: `${h/15 + 20}px` }}>
           <div 
-            className="rounded-full relative transition-all duration-1000 overflow-hidden flex items-center justify-center bg-[#0a0a0a] shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_0_40px_rgba(0,0,0,1)] border border-white/3" 
+            className="rounded-full relative transition-all duration-1000 overflow-hidden flex items-center justify-center bg-gray-800 shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_0_40px_rgba(0,0,0,1)] border border-white/3" 
             style={{ width: `${w/1.2}px`, height: `${w/1.2}px` }}
           >
             <div className="absolute inset-0 rounded-full border-[6px] border-black/40 z-10 pointer-events-none" />
