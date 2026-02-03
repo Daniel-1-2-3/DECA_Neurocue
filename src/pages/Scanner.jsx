@@ -45,7 +45,7 @@ function Scanner() {
   useEffect(() => {
     if (!isAnalyzing) return;
     if (analysisPhase === 'pupil') {
-      const timer = setTimeout(() => setAnalysisPhase('retina'), 3000);
+      const timer = setTimeout(() => setAnalysisPhase('retina'), 5000);
       return () => clearTimeout(timer);
     }
     if (analysisPhase === 'retina') {
@@ -53,10 +53,20 @@ function Scanner() {
         setShowResults(true);
         setHasHistory(true);
         resetState();
-      }, 3000);
+      }, 5000);
       return () => clearTimeout(timer);
     }
   }, [isAnalyzing, analysisPhase]);
+
+  useEffect(() => {
+    if (showResults) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    // Cleanup to ensure scrolling returns if component unmounts
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [showResults]);
 
   const startAnalyze = () => {
     setIsAnalyzing(true);
@@ -124,12 +134,12 @@ function Scanner() {
         {/* Main Circle & Video */}
 <div className="absolute inset-0 flex justify-center items-center pointer-events-none" style={{ height: `${h/1.5}px`, top: `${h/15 + 20}px` }}>
   <div 
-    className="rounded-full relative transition-all duration-1000 overflow-hidden flex items-center justify-center bg-[#0a0a0a] shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_0_40px_rgba(0,0,0,1)] border border-white/[0.03]" 
+    className="rounded-full relative transition-all duration-1000 overflow-hidden flex items-center justify-center bg-[#0a0a0a] shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_0_40px_rgba(0,0,0,1)] border border-white/3" 
     style={{ width: `${w/1.2}px`, height: `${w/1.2}px` }}
   >
     {/* Physical Lens Effect: Multi-layered micro-borders */}
     <div className="absolute inset-0 rounded-full border-[6px] border-black/40 z-10 pointer-events-none" />
-    <div className="absolute inset-0 rounded-full border border-white/[0.05] z-10 pointer-events-none" />
+    <div className="absolute inset-0 rounded-full border border-white/5 z-10 pointer-events-none" />
     
     {/* Ambient Dark Polish (Resting State Texture) */}
     {!isRecording && !isAnalyzing && (
@@ -201,24 +211,43 @@ function Scanner() {
 
         {/* Diagnostic Results Popup */}
         {showResults && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-black/10 backdrop-blur-2xl">
-            <div className="w-full max-w-sm bg-neutral-900 border border-gray-500/30 rounded-sm p-8 relative shadow-[0_0_50px_rgba(16,185,129,0.1)]">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-700 px-4 py-1 rounded-sm text-[14px] uppercase text-white">
-                Diagnostic
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
+            {/* This inner div is now perfectly centered vertically and horizontally */}
+            <div className="w-full max-w-sm bg-neutral-900 border border-white/10 rounded-sm p-8 relative shadow-2xl animate-in fade-in zoom-in duration-300">
+              
+              {/* Label Tag */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-neutral-700 border border-white/10 px-4 py-1 rounded-sm text-[12px] uppercase tracking-tighter text-white font-medium">
+                Diagnostic Report
               </div>
+
               <div className="space-y-6 mt-4">
-                <div className="border-l-2 border-gray-600 pl-4">
-                  <div className="text-white/40 text-[11px] uppercase mb-1">Concussion Assessment</div>
-                  <div className="text-white uppercase text-sm">Concussion:</div>
-                  <div className="text-red-400 text-sm mt-1">92.3% Probability</div>
+                <div className="border-l-2 border-red-500/50 pl-4">
+                  <div className="text-white/40 text-[10px] uppercase tracking-widest mb-1 font-semibold">
+                    Concussion Assessment
+                  </div>
+                  <div className="text-white uppercase text-sm font-medium">Result:</div>
+                  <div className="text-red-400 text-sm mt-0.5 font-bold italic">
+                    92.3% Probability
+                  </div>
                 </div>
+
                 <div className="border-l-2 border-gray-600 pl-4">
-                  <div className="text-white/40 text-[11px] uppercase mb-1">Other Possible Trauma</div>
-                  <div className="text-white uppercase text-sm">Papilledema:</div>
-                  <div className="text-gray-400 text-sm mt-1">Early stage brain swelling; dangerously high pressures in cranium</div>
+                  <div className="text-white/40 text-[10px] uppercase tracking-widest mb-1 font-semibold">
+                    Secondary Findings
+                  </div>
+                  <div className="text-white uppercase text-sm font-medium">Papilledema:</div>
+                  <div className="text-gray-400 text-[11px] mt-1 leading-tight tracking-wide">
+                    Early stage brain swelling; dangerously high pressures in cranium.
+                  </div>
                 </div>
               </div>
-              <button onClick={() => setShowResults(false)} className="w-full mt-10 py-3 bg-white/5 border border-white/10 rounded-sm text-white/70 text-[10px] font-bold uppercase tracking-[0.2em]">Close Report</button>
+
+              <button 
+                onClick={() => setShowResults(false)} 
+                className="w-full mt-10 py-3 bg-white/5 border border-white/10 hover:bg-white/10 rounded-sm text-white/70 text-[10px] font-black uppercase tracking-[0.3em] transition-colors"
+              >
+                Dismiss Report
+              </button>
             </div>
           </div>
         )}
