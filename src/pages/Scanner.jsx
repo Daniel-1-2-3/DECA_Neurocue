@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import pupilVideo from "../assets/pupil.mp4";
 import retinaVideo from "../assets/retina.mp4";
 import analyzePupilVideo from "../assets/analyzePupil.mp4";
@@ -30,19 +30,30 @@ function Scanner() {
   const [otherConditionDescription, setOtherConditionDescription] = useState("Early stage brain swelling; dangerously high pressures in cranium.")
   const { w, h } = useWindowSize();
 
-  // Preloading logic remains to ensure 'isReady' status
+  const loopVideoRef = useRef(null);
+  const analyzeVideoRef = useRef(null);
+
+  // GOD-TIER BUFFERING LOGIC
   useEffect(() => {
     const assets = [pupilVideo, retinaVideo, analyzePupilVideo, analyzeRetinaVideo];
-    let loaded = 0;
-    assets.forEach(src => {
+    const status = new Array(assets.length).fill(false);
+
+    assets.forEach((src, index) => {
       const v = document.createElement('video');
       v.src = src;
       v.preload = 'auto';
       v.muted = true;
-      v.oncanplaythrough = () => {
-        loaded++;
-        if (loaded === assets.length) setIsReady(true);
+      v.playsInline = true;
+
+      const markAsLoaded = () => {
+        status[index] = true;
+        if (status.every(s => s === true)) {
+          setIsReady(true);
+        }
       };
+
+      v.oncanplaythrough = markAsLoaded;
+      v.onsuspend = markAsLoaded;
       v.load();
     });
   }, []);
@@ -56,9 +67,34 @@ function Scanner() {
     setAnalysisPhase('none');
   };
 
+  useEffect(() => {
+    if (loopVideoRef.current) {
+      loopVideoRef.current.load();
+      loopVideoRef.current.play().catch(() => {});
+    }
+  }, [scanMode]);
+
+  useEffect(() => {
+    if (analyzeVideoRef.current && isAnalyzing) {
+      analyzeVideoRef.current.load();
+      analyzeVideoRef.current.play().catch(() => {});
+    }
+  }, [analysisPhase, isAnalyzing]);
+
   const startAnalyze = () => {
     setIsAnalyzing(true);
     setAnalysisPhase('pupil');
+  };
+
+  // RESTORED: Click to Pause/Play Logic
+  const handleVideoClick = () => {
+    if (isAnalyzing && analyzeVideoRef.current) {
+      if (analyzeVideoRef.current.paused) {
+        analyzeVideoRef.current.play().catch(() => {});
+      } else {
+        analyzeVideoRef.current.pause();
+      }
+    }
   };
 
   function record() {
@@ -148,7 +184,7 @@ function Scanner() {
           </div>
         )}
 
-        {/* Main Circle & Video Stack */}
+        {/* Main Circle & Video Duo-Mount */}
         <div className="absolute inset-0 flex justify-center items-center pointer-events-none" style={{ height: `${h/1.5}px`, top: `${h/15 + 20}px` }}>
           <div 
             className="rounded-full relative transition-all duration-1000 overflow-hidden flex items-center justify-center bg-gray-800 shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_0_40px_rgba(0,0,0,1)] border border-white/3" 
@@ -156,34 +192,31 @@ function Scanner() {
           >
             <div className="absolute inset-0 rounded-full border-[6px] border-black/40 z-10 pointer-events-none" />
             
-            <div className="relative w-full h-full rounded-full overflow-hidden pointer-events-auto cursor-pointer">
+            <div 
+              className="relative w-full h-full rounded-full overflow-hidden pointer-events-auto cursor-pointer"
+              onClick={handleVideoClick}
+            >
               
-              {/* VIDEO STACK: All mounted, only one visible */}
+              {/* TAG 1: Loop Videos (Pupil / Retina) */}
               <video
-                src={pupilVideo}
-                className={`absolute inset-0 w-full h-full object-cover scale-130 transition-opacity duration-300 ${(!isAnalyzing && scanMode === 'pupil' && isRecording) ? 'opacity-80' : 'opacity-0'}`}
+                ref={loopVideoRef}
+                src={scanMode === 'pupil' ? pupilVideo : retinaVideo}
+                className={`absolute inset-0 w-full h-full object-cover scale-130 transition-opacity duration-300 ${(!isAnalyzing && isRecording) ? 'opacity-80' : 'opacity-0'}`}
                 autoPlay muted loop playsInline
               />
+
+              {/* TAG 2: Analysis Videos (AnalyzePupil / AnalyzeRetina) */}
               <video
-                src={retinaVideo}
-                className={`absolute inset-0 w-full h-full object-cover scale-130 transition-opacity duration-300 ${(!isAnalyzing && scanMode === 'retina' && isRecording) ? 'opacity-80' : 'opacity-0'}`}
-                autoPlay muted loop playsInline
-              />
-              <video
-                src={analyzePupilVideo}
-                className={`absolute inset-0 w-full h-full object-cover scale-130 transition-opacity duration-300 ${(isAnalyzing && analysisPhase === 'pupil') ? 'opacity-80' : 'opacity-0'}`}
-                autoPlay={isAnalyzing && analysisPhase === 'pupil'}
-                onEnded={() => setAnalysisPhase('retina')}
-                muted playsInline
-              />
-              <video
-                src={analyzeRetinaVideo}
-                className={`absolute inset-0 w-full h-full object-cover scale-130 transition-opacity duration-300 ${(isAnalyzing && analysisPhase === 'retina') ? 'opacity-80' : 'opacity-0'}`}
-                autoPlay={isAnalyzing && analysisPhase === 'retina'}
+                ref={analyzeVideoRef}
+                src={analysisPhase === 'retina' ? analyzeRetinaVideo : analyzePupilVideo}
+                className={`absolute inset-0 w-full h-full object-cover scale-130 transition-opacity duration-300 ${isAnalyzing ? 'opacity-80' : 'opacity-0'}`}
                 onEnded={() => {
-                    setShowResults(true);
-                    setHasHistory(true);
-                    resetState();
+                    if (analysisPhase === 'pupil') setAnalysisPhase('retina');
+                    else {
+                        setShowResults(true);
+                        setHasHistory(true);
+                        resetState();
+                    }
                 }}
                 muted playsInline
               />
@@ -232,7 +265,7 @@ function Scanner() {
           )}
         </div>
 
-        {/* Results Modal omitted for brevity, logic remains same */}
+        {/* Results Modal */}
         {showResults && (
            <div className="fixed inset-0 z-100 flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
            <div className="w-full max-w-sm bg-neutral-900 border border-white/10 rounded-sm p-8 relative shadow-2xl animate-in fade-in zoom-in duration-300">
@@ -260,7 +293,7 @@ function Scanner() {
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes scan-curved { 
+        @keyframes scan-curved {
             0% { transform: translateY(-100%); opacity: 0; } 
             15% { opacity: 1; } 
             85% { opacity: 1; } 
