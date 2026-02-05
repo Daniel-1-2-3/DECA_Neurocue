@@ -9,7 +9,7 @@ function App() {
         <Route path="/" element={<Scanner />} />
         <Route path="/demo" element={<Demo />} />
         <Route path="*" element={<Scanner />} />
-      </Routes>
+      </Routes> 
     </BrowserRouter>
   );
 }
