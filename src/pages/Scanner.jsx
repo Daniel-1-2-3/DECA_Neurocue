@@ -267,24 +267,54 @@ function Scanner() {
 
         {/* Results Modal */}
         {showResults && (
-           <div className="fixed inset-0 z-100 flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
-           <div className="w-full max-w-sm bg-neutral-900 border border-white/10 rounded-sm p-8 relative shadow-2xl animate-in fade-in zoom-in duration-300">
-             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-neutral-700 border border-white/10 px-4 py-1 rounded-sm text-[12px] uppercase tracking-tighter text-white font-medium">Diagnostic</div>
-             <div className="space-y-6 mt-4">
-               <div className="border-l-2 border-gray-600 pl-4">
-                 <div className="text-white/40 text-[10px] uppercase tracking-widest mb-1 font-semibold">Concussion Assessment</div>
-                 <div className="text-white uppercase text-sm font-medium">Concussion</div>
-                 <div className="text-red-400 text-sm mt-0.5">{concussionProb}</div>
-               </div>
-               <div className="border-l-2 border-gray-600 pl-4">
-                 <div className="text-white/40 text-[10px] uppercase tracking-widest mb-1 font-semibold">Other Possible Injuries</div>
-                 <div className="text-white uppercase text-sm font-medium">{otherCondition}</div>
-                 <div className="text-gray-400 text-[12px] mt-1 leading-tight tracking-wide">{otherConditionDescription}</div>
-               </div>
-             </div>
-             <button onClick={() => setShowResults(false)} className="w-full mt-10 py-3 bg-white/5 border border-white/10 hover:bg-white/10 rounded-sm text-white/70 text-[12px] uppercase transition-colors">Close Report</button>
-           </div>
-         </div>
+          <div className="fixed inset-0 z-100 flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
+            <div className="w-full max-w-sm bg-neutral-900 border border-white/10 rounded-sm p-8 relative shadow-2xl animate-in fade-in zoom-in duration-300">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-neutral-700 border border-white/10 px-4 py-1 rounded-sm text-[12px] uppercase tracking-tighter text-white font-medium">Diagnostic</div>
+              
+              <div className="space-y-6 mt-4">
+                <div className="border-l-2 border-gray-600 pl-4">
+                  <div className="text-white/40 text-[10px] uppercase tracking-widest mb-1 font-semibold">Concussion Assessment</div>
+                  <div className="text-white uppercase text-sm font-medium">Concussion</div>
+                  <div className="text-red-400 text-sm mt-0.5">{concussionProb}</div>
+                </div>
+                
+                <div className="border-l-2 border-gray-600 pl-4">
+                  <div className="text-white/40 text-[10px] uppercase tracking-widest mb-1 font-semibold">Other Possible Injuries</div>
+                  <div className="text-white uppercase text-sm font-medium">{otherCondition}</div>
+                  <div className="text-gray-400 text-[12px] mt-1 leading-tight tracking-wide">{otherConditionDescription}</div>
+                </div>
+
+                {/* --- NEXT STEPS LINK BOX --- */}
+                <div className="group cursor-pointer mt-4 p-3 bg-white/5 border border-white/5 hover:border-white/20 transition-all flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] uppercase tracking-widest text-white/40 group-hover:text-white/60 transition-colors">Action Required</span>
+                    <span className="text-[12px] uppercase tracking-widest text-white font-medium">Next Steps</span>
+                  </div>
+                  <div className="flex items-center justify-center w-8 h-8 group-hover:bg-white/10 group-hover:translate-x-1 transition-all">
+                    <svg 
+                      viewBox="0 0 24 24" 
+                      className="w-4 h-4 text-white/70" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="2.5" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round"
+                    >
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                      <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setShowResults(false)} 
+                className="w-full mt-6 py-3 border-t border-white/5 text-white/30 hover:text-white/60 text-[10px] uppercase tracking-[0.3em] transition-colors"
+              >
+                Dismiss Report
+              </button>
+            </div>
+          </div>
         )}
 
         <button className="fixed bottom-2 left-2 z-200 py-2 h-20 w-14 opacity-0" onClick={() => iritis()} />
